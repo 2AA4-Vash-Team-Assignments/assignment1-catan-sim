@@ -1,0 +1,173 @@
+classDiagram
+    direction TB
+
+    %% ==================== ENUMERATIONS ====================
+
+    class ResourceType {
+        <<enumeration>>
+        WOOD
+        BRICK
+        WHEAT
+        ORE
+        SHEEP
+    }
+
+    class BuildingType {
+        <<enumeration>>
+        SETTLEMENT
+        CITY
+    }
+
+    %% ==================== GAME MANAGEMENT ====================
+
+    class CatanGame {
+        -currentRound : int
+        -longestRoadLength : int
+        +play() void
+        +setupPhase() void
+        +executeRound() void
+        +executeTurn(player : Player) void
+        +distributeResources(diceRoll : int) void
+        +checkWinCondition() boolean
+        +updateLongestRoad() void
+        +printRoundSummary() void
+    }
+
+    class Configuration {
+        -maxRounds : int
+        +getMaxRounds() int
+        +load(filePath : String) void
+    }
+
+    class Dice {
+        +roll() int
+    }
+
+    class Bank {
+        -supply : Map~ResourceType, Integer~
+        +hasEnoughResources(type : ResourceType, amount : int) boolean
+        +distributeResource(type : ResourceType, amount : int) void
+        +collectResource(type : ResourceType, amount : int) void
+        +getRemainingCount(type : ResourceType) int
+    }
+
+    class Demonstrator {
+        +main(args : String[])$ void
+    }
+
+    %% ==================== BOARD TOPOLOGY ====================
+
+    class Board {
+        +initialize() void
+        +getTilesForNumber(number : int) List~Tile~
+        +getAvailableSettlementNodes(player : Player) List~Node~
+        +getAvailableRoadEdges(player : Player) List~Edge~
+        +getUpgradeableNodes(player : Player) List~Node~
+        +getAvailableSetupNodes() List~Node~
+        +calculateLongestRoad(player : Player) int
+    }
+
+    class Tile {
+        -id : int
+        -numberToken : int
+        -resourceType : ResourceType
+        +getId() int
+        +getNumberToken() int
+        +getResourceType() ResourceType
+        +getAdjacentNodes() List~Node~
+    }
+
+    class Node {
+        -id : int
+        +getId() int
+        +isOccupied() boolean
+        +getBuilding() Building
+        +satisfiesDistanceRule() boolean
+        +getAdjacentNodes() List~Node~
+        +getAdjacentTiles() List~Tile~
+        +getAdjacentEdges() List~Edge~
+    }
+
+    class Edge {
+        +isOccupied() boolean
+        +getRoad() Road
+        +getEndpoints() List~Node~
+    }
+
+    %% ==================== GAME PIECES ====================
+
+    class Building {
+        -type : BuildingType
+        +getType() BuildingType
+        +getOwner() Player
+        +getVictoryPoints() int
+        +getResourceMultiplier() int
+    }
+
+    class Road {
+        +getOwner() Player
+        +getEdge() Edge
+    }
+
+    %% ==================== PLAYER ====================
+
+    class Player {
+        -id : int
+        -resources : Map~ResourceType, Integer~
+        -remainingSettlements : int
+        -remainingCities : int
+        -remainingRoads : int
+        +getId() int
+        +getVictoryPoints() int
+        +getTotalResourceCards() int
+        +getResourceCount(type : ResourceType) int
+        +addResource(type : ResourceType, amount : int) void
+        +removeResource(type : ResourceType, amount : int) void
+        +canBuildRoad() boolean
+        +canBuildSettlement() boolean
+        +canBuildCity() boolean
+        +buildRoad(edge : Edge) void
+        +buildSettlement(node : Node) void
+        +buildCity(node : Node) void
+        +chooseRandomAction(board : Board) void
+    }
+
+    %% ==================== COMPOSITION RELATIONSHIPS ====================
+    %% (Filled diamond -- strong lifecycle ownership)
+
+    CatanGame "1" *-- "1" Board : contains
+    CatanGame "1" *-- "4" Player : contains
+    CatanGame "1" *-- "1" Dice : contains
+    CatanGame "1" *-- "1" Bank : contains
+    CatanGame "1" *-- "1" Configuration : contains
+
+    Board "1" *-- "19" Tile : contains
+    Board "1" *-- "54" Node : contains
+    Board "1" *-- "72" Edge : contains
+
+    %% ==================== ASSOCIATION RELATIONSHIPS ====================
+    %% (Plain lines with multiplicities)
+
+    CatanGame "1" --> "0..1" Player : longestRoadHolder
+
+    Tile "1..3" -- "6" Node : adjacentTo
+    Node "2" -- "2..3" Edge : connectsTo
+
+    Node "1" -- "0..1" Building : has
+    Edge "1" -- "0..1" Road : has
+
+    Building "*" --> "1" Player : ownedBy
+    Road "*" --> "1" Player : ownedBy
+
+    %% ==================== DEPENDENCY ====================
+    %% (Dashed arrow -- uses/creates)
+
+    Demonstrator ..> CatanGame : creates
+
+    %% ==================== NOTE ====================
+    %% Node self-association: each Node is adjacent to 2-3 other Nodes.
+    %% Represented as a note because Mermaid renders self-associations as
+    %% broken loops. In Papyrus, model this as a proper self-association
+    %% with multiplicity 2..3 on both ends.
+
+    note for Node "Self-association: adjacent to 2..3 other Nodes"
