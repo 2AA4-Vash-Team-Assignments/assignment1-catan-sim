@@ -1,0 +1,22 @@
+# Maven build output
+target/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+bin/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Reports (submitted via A2L, not GitHub)
+report/
+
+# Local files
+kanban-issues.md
+model/catan-model.uml
