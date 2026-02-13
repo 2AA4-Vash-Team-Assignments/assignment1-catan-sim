@@ -1,5 +1,6 @@
 package ca.mcmaster.se2aa4.catan;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -102,46 +103,67 @@ public class Player {
         remainingSettlements++;
     }
 
-    public void chooseRandomAction(Board board) {
-        boolean acted = true;
-        while (acted) {
-            acted = false;
-
-            if (canBuildCity()) {
-                List<Node> upgradeable = board.getUpgradeableNodes(this);
-                if (!upgradeable.isEmpty()) {
-                    Node chosen = upgradeable.get(random.nextInt(upgradeable.size()));
-                    buildCity(chosen);
-                    System.out.println("P" + id + ": Built city at node " + chosen.getId());
-                    acted = true;
-                    continue;
-                }
+    /**
+     * R1.8: Implements a simple linear check of all actions that can be executed,
+     * then picks one randomly. Agents with >7 cards must try to spend by building.
+     *
+     * @param board        the game board
+     * @param currentRound the current round (for output encoding)
+     */
+    public void chooseRandomAction(Board board, int currentRound) {
+        // R1.8: agents with >7 cards must keep trying to spend until <=7 or no options
+        while (true) {
+            List<Runnable> actions = collectPossibleActions(board, currentRound);
+            if (actions.isEmpty()) {
+                break;
             }
-
-            if (canBuildSettlement()) {
-                List<Node> available = board.getAvailableSettlementNodes(this);
-                if (!available.isEmpty()) {
-                    Node chosen = available.get(random.nextInt(available.size()));
-                    buildSettlement(chosen);
-                    System.out.println("P" + id + ": Built settlement at node " + chosen.getId());
-                    acted = true;
-                    continue;
-                }
-            }
-
-            if (canBuildRoad()) {
-                List<Edge> available = board.getAvailableRoadEdges(this);
-                if (!available.isEmpty()) {
-                    Edge chosen = available.get(random.nextInt(available.size()));
-                    buildRoad(chosen);
-                    List<Node> endpoints = chosen.getEndpoints();
-                    System.out.println("P" + id + ": Built road between nodes "
-                            + endpoints.get(0).getId() + " and " + endpoints.get(1).getId());
-                    acted = true;
-                    continue;
-                }
+            // Pick one action randomly from all available options
+            Runnable chosen = actions.get(random.nextInt(actions.size()));
+            chosen.run();
+            // Stop when no longer forced to spend (>7), or after one build for randomly acting
+            if (getTotalResourceCards() <= 7) {
+                break;
             }
         }
+    }
+
+    /**
+     * Linear check: enumerates all possible build actions (city, settlement, road)
+     * that the player can currently execute.
+     */
+    private List<Runnable> collectPossibleActions(Board board, int currentRound) {
+        List<Runnable> actions = new ArrayList<>();
+
+        if (canBuildCity()) {
+            for (Node node : board.getUpgradeableNodes(this)) {
+                Node n = node;
+                actions.add(() -> {
+                    buildCity(n);
+                    System.out.println(currentRound + " / P" + id + ": Built city at node " + n.getId());
+                });
+            }
+        }
+        if (canBuildSettlement()) {
+            for (Node node : board.getAvailableSettlementNodes(this)) {
+                Node n = node;
+                actions.add(() -> {
+                    buildSettlement(n);
+                    System.out.println(currentRound + " / P" + id + ": Built settlement at node " + n.getId());
+                });
+            }
+        }
+        if (canBuildRoad()) {
+            for (Edge edge : board.getAvailableRoadEdges(this)) {
+                Edge e = edge;
+                actions.add(() -> {
+                    buildRoad(e);
+                    List<Node> endpoints = e.getEndpoints();
+                    System.out.println(currentRound + " / P" + id + ": Built road between nodes "
+                            + endpoints.get(0).getId() + " and " + endpoints.get(1).getId());
+                });
+            }
+        }
+        return actions;
     }
 
     public int getRemainingSettlements() {
