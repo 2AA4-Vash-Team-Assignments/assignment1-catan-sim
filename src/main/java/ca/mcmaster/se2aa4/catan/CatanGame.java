@@ -49,17 +49,17 @@ public class CatanGame {
     }
 
     public void setupPhase() {
-        // Each player places 2 settlements and 2 roads (no resource cost)
-        // Forward order for first placement, reverse for second
+        // Snake draft: each player places 2 settlements + 2 roads in 1-2-3-4-4-3-2-1 order
+        // First placement: no resources. Second placement: receive resources from adjacent tiles
         for (Player player : players) {
-            placeInitialSettlementAndRoad(player);
+            placeInitialSettlementAndRoad(player, false);
         }
         for (int i = players.size() - 1; i >= 0; i--) {
-            placeInitialSettlementAndRoad(players.get(i));
+            placeInitialSettlementAndRoad(players.get(i), true);
         }
     }
 
-    private void placeInitialSettlementAndRoad(Player player) {
+    private void placeInitialSettlementAndRoad(Player player, boolean isSecondPlacement) {
         List<Node> availableNodes = board.getAvailableSetupNodes();
         if (availableNodes.isEmpty()) return;
 
@@ -67,6 +67,18 @@ public class CatanGame {
         Building settlement = new Building(BuildingType.SETTLEMENT, player);
         chosenNode.setBuilding(settlement);
         System.out.println("0 / P" + player.getId() + ": Placed settlement at node " + chosenNode.getId());
+
+        // Second settlement: receive 1 resource per adjacent tile (skipping desert)
+        if (isSecondPlacement) {
+            for (Tile tile : chosenNode.getAdjacentTiles()) {
+                ResourceType resource = tile.getResourceType();
+                if (resource != null && bank.hasEnoughResources(resource, 1)) {
+                    bank.distributeResource(resource, 1);
+                    player.addResource(resource, 1);
+                    System.out.println("0 / P" + player.getId() + ": Received 1 " + resource + " (starting resources)");
+                }
+            }
+        }
 
         // Place a road on an adjacent edge
         List<Edge> adjacentEdges = chosenNode.getAdjacentEdges();
