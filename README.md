@@ -24,13 +24,14 @@ mvn compile
 
 Run the simulator with default settings (50 rounds):
 ```bash
-mvn -q exec:java -Dexec.mainClass="ca.mcmaster.se2aa4.catan.Demonstrator"
+mvn exec:java
 ```
 
-Run with a configuration file:
+Run with a configuration file (e.g. `config.txt` with `turns=100`):
 ```bash
-mvn -q exec:java -Dexec.mainClass="ca.mcmaster.se2aa4.catan.Demonstrator" -Dexec.args="config.txt"
+mvn exec:java -Dexec.args="config.txt"
 ```
+On Windows PowerShell, use: `mvn exec:java "-Dexec.args=config.txt"`
 
 ### Configuration
 
