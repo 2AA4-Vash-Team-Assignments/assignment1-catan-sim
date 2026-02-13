@@ -101,15 +101,28 @@ public class CatanGame {
                 return;
             }
         }
+
+        // R1.7: Print current victory points at end of each round
+        printVictoryPoints();
+    }
+
+    /**
+     * Prints the current victory points for all players.
+     * Called at the end of each round per R1.7.
+     */
+    private void printVictoryPoints() {
+        StringBuilder vpLine = new StringBuilder(currentRound + " / VP:");
+        for (Player player : players) {
+            int vp = calculateVictoryPoints(player);
+            vpLine.append(" P").append(player.getId()).append("=").append(vp);
+        }
+        System.out.println(vpLine);
     }
 
     public void executeTurn(Player player) {
-        // R1.8: if player has >7 cards, they must try to spend
-        if (player.getTotalResourceCards() > 7) {
-            player.chooseRandomAction(board);
-        } else {
-            player.chooseRandomAction(board);
-        }
+        // R1.8: agents with >7 cards must try to spend; all agents may build
+        // chooseRandomAction does linear check of possible actions and picks one randomly
+        player.chooseRandomAction(board, currentRound);
         updateLongestRoad();
     }
 
