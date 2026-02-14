@@ -22,16 +22,11 @@ public class Configuration {
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
                 if (line.startsWith("turns")) {
-                    // Support both "turns=100" and "turns: 100" formats
                     String[] parts = line.split("[=:]");
                     if (parts.length == 2) {
-                        try {
-                            int value = Integer.parseInt(parts[1].trim());
-                            if (value >= 1 && value <= 8192) {
-                                this.maxRounds = value;
-                            }
-                        } catch (NumberFormatException e) {
-                            System.err.println("Invalid turns value: " + parts[1].trim());
+                        int value = Integer.parseInt(parts[1].trim());
+                        if (value >= 1 && value <= 8192) {
+                            this.maxRounds = value;
                         }
                     }
                 }

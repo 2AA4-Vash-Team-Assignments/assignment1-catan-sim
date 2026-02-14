@@ -31,12 +31,8 @@ public class Player {
         return id;
     }
 
-    /**
-     * Stub: VP calculation requires board state (buildings on nodes + longest road),
-     * so the real logic lives in CatanGame.calculateVictoryPoints(player).
-     * Kept here for traceability to the UML model where this method is defined on Player.
-     */
     public int getVictoryPoints() {
+        // VP calculation requires board state; placeholder
         return 0;
     }
 
@@ -57,7 +53,7 @@ public class Player {
     }
 
     public void removeResource(ResourceType type, int amount) {
-        resources.put(type, Math.max(0, resources.get(type) - amount));
+        resources.put(type, resources.get(type) - amount);
     }
 
     public boolean canBuildRoad() {
@@ -115,35 +111,19 @@ public class Player {
     }
 
     /**
-     * R1.8: Implements a simple linear check of all actions that can be executed,
-     * then picks one randomly. Agents with >7 cards must try to spend by building.
-     *
-     * @param board        the game board
-     * @param bank         the resource bank (resources returned when spent)
-     * @param currentRound the current round (for output encoding)
+     * Checks all possible build actions and picks one at random.
+     * Called once per turn for the player.
      */
     public void chooseRandomAction(Board board, Bank bank, int currentRound) {
-        // R1.8: agents with >7 cards must keep trying to spend until <=7 or no options
-        while (true) {
-            List<Runnable> actions = collectPossibleActions(board, bank, currentRound);
-            if (actions.isEmpty()) {
-                break;
-            }
-            // Pick one action randomly from all available options
-            Runnable chosen = actions.get(random.nextInt(actions.size()));
-            chosen.run();
-            // Stop when no longer forced to spend (>7), or after one build for randomly acting
-            if (getTotalResourceCards() <= 7) {
-                break;
-            }
+        List<Runnable> actions = collectPossibleActions(board, bank);
+        if (actions.isEmpty()) {
+            return;
         }
+        Runnable chosen = actions.get(random.nextInt(actions.size()));
+        chosen.run();
     }
 
-    /**
-     * Linear check: enumerates all possible build actions (city, settlement, road)
-     * that the player can currently execute.
-     */
-    private List<Runnable> collectPossibleActions(Board board, Bank bank, int currentRound) {
+    private List<Runnable> collectPossibleActions(Board board, Bank bank) {
         List<Runnable> actions = new ArrayList<>();
 
         if (canBuildCity()) {
@@ -151,7 +131,7 @@ public class Player {
                 Node n = node;
                 actions.add(() -> {
                     buildCity(n, bank);
-                    System.out.println(currentRound + " / P" + id + ": Built city at node " + n.getId());
+                    System.out.println("P" + id + ": Built city at node " + n.getId());
                 });
             }
         }
@@ -160,7 +140,7 @@ public class Player {
                 Node n = node;
                 actions.add(() -> {
                     buildSettlement(n, bank);
-                    System.out.println(currentRound + " / P" + id + ": Built settlement at node " + n.getId());
+                    System.out.println("P" + id + ": Built settlement at node " + n.getId());
                 });
             }
         }
@@ -170,7 +150,7 @@ public class Player {
                 actions.add(() -> {
                     buildRoad(e, bank);
                     List<Node> endpoints = e.getEndpoints();
-                    System.out.println(currentRound + " / P" + id + ": Built road between nodes "
+                    System.out.println("P" + id + ": Built road between nodes "
                             + endpoints.get(0).getId() + " and " + endpoints.get(1).getId());
                 });
             }

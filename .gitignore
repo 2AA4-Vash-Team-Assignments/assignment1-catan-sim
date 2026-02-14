@@ -16,7 +16,11 @@ Thumbs.db
 
 # Reports (submitted via A2L, not GitHub)
 report/
+*.pdf
 
 # Local files
 kanban-issues.md
 model/catan-model.uml
+
+# Generated code build output
+genai/generated-code/target/

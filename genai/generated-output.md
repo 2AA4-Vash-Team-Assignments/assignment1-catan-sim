@@ -22,16 +22,19 @@ All files below were generated in a single pass from the UML domain model.
 | 14 | `CatanGame.java` | Game loop: setup phase, rounds, resource distribution, win check |
 | 15 | `Demonstrator.java` | Entry point with `static void main` |
 
+## Raw Generated Code
+
+The unmodified AI-generated code is preserved in the `generated-code/` subdirectory of this folder. This code compiles and runs, but contains the issues documented in Section 5.3 of the report (incomplete board topology, output format inconsistencies, missing initial resource distribution, R1.8 not differentiated, and a stub `getVictoryPoints()` method).
+
+The final implementation in `src/main/java/` was built starting from this generated code and then manually corrected during Task 4.
+
 ## Compilation and Execution
 
 ```bash
+$ cd genai/generated-code
 $ mvn compile
 # BUILD SUCCESS — 14 source files compiled
 
 $ mvn -q exec:java -Dexec.mainClass="ca.mcmaster.se2aa4.catan.Demonstrator"
-# Game runs, produces output in [Round] / P[id]: [Action] format
+# Game runs but with known issues (see Section 5.3 of report)
 ```
-
-## What Was NOT Modified After Generation
-
-The code in `src/main/java/ca/mcmaster/se2aa4/catan/` is the raw output from the AI, unmodified. No manual edits were applied to the generated code for the purposes of Task 3.
