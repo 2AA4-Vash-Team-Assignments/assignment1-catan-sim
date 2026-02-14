@@ -134,7 +134,7 @@ public class CatanGame {
     public void executeTurn(Player player) {
         // R1.8: agents with >7 cards must try to spend; all agents may build
         // chooseRandomAction does linear check of possible actions and picks one randomly
-        player.chooseRandomAction(board, currentRound);
+        player.chooseRandomAction(board, bank, currentRound);
         updateLongestRoad();
     }
 

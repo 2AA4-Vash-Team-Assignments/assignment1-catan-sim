@@ -22,7 +22,8 @@ public class Configuration {
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
                 if (line.startsWith("turns")) {
-                    String[] parts = line.split("=");
+                    // Support both "turns=100" and "turns: 100" formats
+                    String[] parts = line.split("[=:]");
                     if (parts.length == 2) {
                         int value = Integer.parseInt(parts[1].trim());
                         if (value >= 1 && value <= 8192) {

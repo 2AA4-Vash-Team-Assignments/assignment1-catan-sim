@@ -61,36 +61,32 @@ public class Board {
             }
         }
 
-        // Wire up tile-node adjacency based on standard Catan hex layout
-        // Tile 0 (center): nodes 0-5
-        setTileNodes(0, new int[]{0, 1, 2, 3, 4, 5});
-        // Tile 1 (inner ring): nodes 0, 5, 6, 7, 8, 1
-        setTileNodes(1, new int[]{0, 5, 6, 7, 8, 1});
-        // Tile 2: nodes 1, 8, 9, 10, 11, 2
-        setTileNodes(2, new int[]{1, 8, 9, 10, 11, 2});
-        // Tile 3: nodes 2, 11, 12, 13, 14, 3
-        setTileNodes(3, new int[]{2, 11, 12, 13, 14, 3});
-        // Tile 4: nodes 3, 14, 15, 16, 17, 4
-        setTileNodes(4, new int[]{3, 14, 15, 16, 17, 4});
-        // Tile 5: nodes 4, 17, 18, 19, 20, 5
-        setTileNodes(5, new int[]{4, 17, 18, 19, 20, 5});
-        // Tile 6: nodes 5, 20, 21, 6, 0, 4});
-        // Wait - need to reconsider. Let me use standard Catan hex numbering.
-        setTileNodes(6, new int[]{5, 20, 21, 6, 0, 4});
+        // Wire up tile-node adjacency based on assignment spec hex layout
+        // Vertices listed clockwise from top for each tile
+        // Tile 0 (center)
+        setTileNodes(0, new int[]{5, 0, 1, 2, 3, 4});
 
-        // Outer ring tiles (7-18)
-        setTileNodes(7, new int[]{6, 21, 22, 23, 24, 7});
-        setTileNodes(8, new int[]{7, 24, 25, 26, 27, 8});
-        setTileNodes(9, new int[]{8, 27, 28, 29, 9, 1});
-        setTileNodes(10, new int[]{9, 29, 30, 31, 10, 2});
-        setTileNodes(11, new int[]{10, 31, 32, 33, 34, 11});
-        setTileNodes(12, new int[]{11, 34, 35, 36, 12, 2});
-        setTileNodes(13, new int[]{12, 36, 37, 38, 13, 3});
-        setTileNodes(14, new int[]{13, 38, 39, 40, 41, 14});
-        setTileNodes(15, new int[]{14, 41, 42, 43, 15, 3});
-        setTileNodes(16, new int[]{15, 43, 44, 45, 16, 4});
-        setTileNodes(17, new int[]{16, 45, 46, 47, 48, 17});
-        setTileNodes(18, new int[]{17, 48, 49, 50, 18, 4});
+        // Inner ring (tiles 1-6)
+        setTileNodes(1, new int[]{1, 6, 7, 8, 9, 2});
+        setTileNodes(2, new int[]{3, 2, 9, 10, 11, 12});
+        setTileNodes(3, new int[]{15, 4, 3, 12, 13, 14});
+        setTileNodes(4, new int[]{18, 16, 5, 4, 15, 17});
+        setTileNodes(5, new int[]{21, 19, 20, 0, 5, 16});
+        setTileNodes(6, new int[]{20, 22, 23, 6, 1, 0});
+
+        // Outer ring (tiles 7-18)
+        setTileNodes(7, new int[]{7, 24, 25, 26, 27, 8});
+        setTileNodes(8, new int[]{9, 8, 27, 28, 29, 10});
+        setTileNodes(9, new int[]{11, 10, 29, 30, 31, 32});
+        setTileNodes(10, new int[]{13, 12, 11, 32, 33, 34});
+        setTileNodes(11, new int[]{37, 14, 13, 34, 35, 36});
+        setTileNodes(12, new int[]{39, 17, 15, 14, 37, 38});
+        setTileNodes(13, new int[]{42, 40, 18, 17, 39, 41});
+        setTileNodes(14, new int[]{44, 43, 21, 16, 18, 40});
+        setTileNodes(15, new int[]{45, 47, 46, 19, 21, 43});
+        setTileNodes(16, new int[]{46, 48, 49, 22, 20, 19});
+        setTileNodes(17, new int[]{49, 50, 51, 52, 23, 22});
+        setTileNodes(18, new int[]{23, 52, 53, 24, 7, 6});
 
         // Also set up Node -> Tile back-references
         for (Tile tile : tiles) {
