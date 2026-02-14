@@ -39,8 +39,7 @@ public class CatanGame {
 
         while (currentRound < configuration.getMaxRounds()) {
             currentRound++;
-            executeRound();
-            if (checkWinCondition()) {
+            if (executeRound()) {
                 break;
             }
         }
@@ -66,6 +65,7 @@ public class CatanGame {
         Node chosenNode = availableNodes.get(random.nextInt(availableNodes.size()));
         Building settlement = new Building(BuildingType.SETTLEMENT, player);
         chosenNode.setBuilding(settlement);
+        player.useSetupSettlement();
         System.out.println("0 / P" + player.getId() + ": Placed settlement at node " + chosenNode.getId());
 
         // Second settlement: receive 1 resource per adjacent tile (skipping desert)
@@ -92,13 +92,14 @@ public class CatanGame {
             Edge chosenEdge = freeEdges.get(random.nextInt(freeEdges.size()));
             Road road = new Road(player, chosenEdge);
             chosenEdge.setRoad(road);
+            player.useSetupRoad();
             List<Node> endpoints = chosenEdge.getEndpoints();
             System.out.println("0 / P" + player.getId() + ": Placed road between nodes "
                     + endpoints.get(0).getId() + " and " + endpoints.get(1).getId());
         }
     }
 
-    public void executeRound() {
+    public boolean executeRound() {
         int diceRoll = dice.roll();
         System.out.println(currentRound + " / Dice: " + diceRoll);
 
@@ -110,12 +111,14 @@ public class CatanGame {
         for (Player player : players) {
             executeTurn(player);
             if (checkWinCondition()) {
-                return;
+                printVictoryPoints();
+                return true;
             }
         }
 
         // R1.7: Print current victory points at end of each round
         printVictoryPoints();
+        return false;
     }
 
     /**
@@ -184,16 +187,33 @@ public class CatanGame {
     }
 
     public void updateLongestRoad() {
+        int bestLength = 0;
+        Player bestPlayer = null;
+
         for (Player player : players) {
             int roadLength = board.calculateLongestRoad(player);
-            if (roadLength > longestRoadLength) {
-                longestRoadLength = roadLength;
-                if (longestRoadHolder != player) {
-                    longestRoadHolder = player;
-                    System.out.println(currentRound + " / P" + player.getId()
-                            + ": Claimed longest road (" + roadLength + ")");
-                }
+            if (roadLength > bestLength) {
+                bestLength = roadLength;
+                bestPlayer = player;
+            } else if (roadLength == bestLength && player == longestRoadHolder) {
+                bestPlayer = player; // current holder retains on tie
             }
+        }
+
+        // Must have at least 5 roads to hold longest road
+        if (bestLength < 5) {
+            bestPlayer = null;
+        }
+
+        if (bestPlayer != longestRoadHolder) {
+            longestRoadHolder = bestPlayer;
+            longestRoadLength = (bestPlayer != null) ? bestLength : 4;
+            if (bestPlayer != null) {
+                System.out.println(currentRound + " / P" + bestPlayer.getId()
+                        + ": Claimed longest road (" + bestLength + ")");
+            }
+        } else if (bestPlayer != null) {
+            longestRoadLength = bestLength;
         }
     }
 

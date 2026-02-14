@@ -178,6 +178,14 @@ public class Player {
         return actions;
     }
 
+    public void useSetupSettlement() {
+        remainingSettlements--;
+    }
+
+    public void useSetupRoad() {
+        remainingRoads--;
+    }
+
     public int getRemainingSettlements() {
         return remainingSettlements;
     }

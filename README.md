@@ -41,11 +41,30 @@ turns=100
 ```
 The `turns` parameter accepts values from 1 to 8192. If no configuration file is provided, the simulator defaults to 50 rounds.
 
+## Assignment Task Mapping
+
+| Task | Directory | Description |
+|------|-----------|-------------|
+| Task 1 | `model/` | UML domain model (Mermaid source + exported Papyrus diagram PNG) |
+| Task 2 | `src-gen/` | Papyrus code generation (`.uml` model + generated Java skeletons) |
+| Task 3 | `genai/` | GenAI experiment (prompt, raw output, and analysis) |
+| Task 4 | `src/` | Final implementation (14 Java source files) |
+
 ## Project Structure
 
 ```
 assignment1-catan-sim/
-├── src/main/java/ca/mcmaster/se2aa4/catan/   # Java source code
+├── model/                                     # Task 1: UML Domain Model
+│   ├── catan-domain-model.mmd                 #   Mermaid class diagram source
+│   └── Final_UML_Diagram.png                  #   Exported diagram image
+├── src-gen/                                   # Task 2: Papyrus Code Generation
+│   ├── AA4-A1-TASK2.uml                       #   Papyrus UML model
+│   └── AA4-A1-TASK2/                          #   Generated Java skeletons (15 files)
+├── genai/                                     # Task 3: GenAI Experiment
+│   ├── prompt.md                              #   Documented prompt and parameters
+│   ├── generated-output.md                    #   File listing and known issues
+│   └── generated-code/                        #   Raw AI-generated code (preserved)
+├── src/main/java/ca/mcmaster/se2aa4/catan/   # Task 4: Final Implementation
 │   ├── CatanGame.java          # Main game loop and orchestration
 │   ├── Board.java              # Hex board topology (19 tiles, 54 nodes, 72 edges)
 │   ├── Tile.java               # Hexagonal land tile
@@ -60,8 +79,6 @@ assignment1-catan-sim/
 │   ├── Demonstrator.java       # Entry point (static void main)
 │   ├── ResourceType.java       # Enum: WOOD, BRICK, WHEAT, ORE, SHEEP
 │   └── BuildingType.java       # Enum: SETTLEMENT, CITY
-├── model/                      # UML domain model (Mermaid source + PNG)
-├── genai/                      # GenAI prompt and output documentation (Task 3)
 ├── pom.xml                     # Maven build configuration
 └── README.md
 ```
