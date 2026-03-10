@@ -41,10 +41,8 @@
                 <version>3.1.0</version>
                 <configuration>
                     <mainClass>ca.mcmaster.se2aa4.catan.Demonstrator</mainClass>
-                    <!-- Use -Dexec.args="config.txt" to load custom config -->
                 </configuration>
             </plugin>
-            <!-- Maven Surefire: required to run JUnit 5 tests via mvn test -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
