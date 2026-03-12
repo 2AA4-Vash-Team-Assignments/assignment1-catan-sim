@@ -7,13 +7,23 @@ import java.io.IOException;
 public class Configuration {
 
     private int maxRounds;
+    private int humanPlayerId;
 
     public Configuration() {
         this.maxRounds = 50;
+        this.humanPlayerId = 0;
     }
 
     public int getMaxRounds() {
         return maxRounds;
+    }
+
+    public int getHumanPlayerId() {
+        return humanPlayerId;
+    }
+
+    public boolean isHumanGame() {
+        return humanPlayerId >= 1 && humanPlayerId <= 4;
     }
 
     public void load(String filePath) {
@@ -22,7 +32,6 @@ public class Configuration {
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
                 if (line.startsWith("turns")) {
-                    // Support both "turns=100" and "turns: 100" formats
                     String[] parts = line.split("[=:]");
                     if (parts.length == 2) {
                         try {
@@ -32,6 +41,18 @@ public class Configuration {
                             }
                         } catch (NumberFormatException e) {
                             System.err.println("Invalid turns value: " + parts[1].trim());
+                        }
+                    }
+                }
+                if (line.startsWith("human")) {
+                    String[] parts = line.split("[=:]");
+                    if (parts.length == 2) {
+                        try {
+                            int value = Integer.parseInt(parts[1].trim());
+                            if (value >= 0 && value <= 4) {
+                                this.humanPlayerId = value;
+                            }
+                        } catch (NumberFormatException ignored) {
                         }
                     }
                 }

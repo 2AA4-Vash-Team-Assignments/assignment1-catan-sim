@@ -22,7 +22,8 @@ import org.junit.platform.suite.api.Suite;
         BuildingTest.class,
         NodeTest.class,
         BoardTest.class,
-        CatanGameTest.class
+        CatanGameTest.class,
+        CommandParserTest.class
 })
 public class CatanTestSuite {
     // class intentionally left empty.

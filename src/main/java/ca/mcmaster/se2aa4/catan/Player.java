@@ -14,8 +14,15 @@ public class Player {
     private int remainingCities;
     private int remainingRoads;
     private final Random random;
+    private final boolean human;
+    private final HumanInputReader inputReader;
+    private final CommandParser commandParser;
 
     public Player(int id) {
+        this(id, null, null);
+    }
+
+    public Player(int id, HumanInputReader inputReader, CommandParser commandParser) {
         this.id = id;
         this.resources = new EnumMap<>(ResourceType.class);
         for (ResourceType type : ResourceType.values()) {
@@ -25,6 +32,21 @@ public class Player {
         this.remainingCities = 4;
         this.remainingRoads = 15;
         this.random = new Random();
+        this.inputReader = inputReader;
+        this.commandParser = commandParser;
+        this.human = (inputReader != null && commandParser != null);
+    }
+
+    public boolean isHuman() {
+        return human;
+    }
+
+    public HumanInputReader getInputReader() {
+        return inputReader;
+    }
+
+    public CommandParser getCommandParser() {
+        return commandParser;
     }
 
     public int getId() {
