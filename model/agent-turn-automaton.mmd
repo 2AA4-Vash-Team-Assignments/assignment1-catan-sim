@@ -1,0 +1,47 @@
+%% ============================================================
+%% Assignment 2 – Agent turn automaton
+%% ============================================================
+%% Models which actions can be taken when within a single turn.
+%% One turn = one player's turn (human or agent).
+%%
+%% ACTION SPACE (what can be taken when):
+%%   AwaitRoll    : ROLL only (human types "Roll"; agent auto-rolls)
+%%   RobberDiscard: (automatic) each player with >7 cards discards half
+%%   RobberPlace  : (automatic) robber placed on random tile
+%%   RobberSteal  : (automatic) one qualifying player gives card to roller
+%%   PostRoll     : (automatic) distribute resources; then → BuildOrTrade
+%%   BuildOrTrade : BUILD (settlement | city | road), TRADE, LIST; repeat or pass
+%%   AwaitGo      : GO only (blocks until "go" for step-forward R2.4)
+%% ============================================================
+
+stateDiagram-v2
+    direction LR
+
+    [*] --> AwaitRoll : turn starts
+
+    AwaitRoll --> RollDice : ROLL (human) or auto (agent)
+
+    RollDice --> PostRoll : dice ≠ 7
+    RollDice --> RobberDiscard : dice = 7
+
+    RobberDiscard --> RobberPlace : all with >7 cards have discarded
+    note right of RobberDiscard : Players with >7 cards discard half (round down)
+
+    RobberPlace --> RobberSteal : robber placed on new tile
+    note right of RobberPlace : Robber on random tile (R2.5)
+
+    RobberSteal --> PostRoll : one qualifying player gives random card to roller
+    note right of RobberSteal : Qualifying = settlement/city adjacent to robber tile
+
+    PostRoll --> BuildOrTrade : resources distributed (if any)
+    note right of PostRoll : Tiles with dice number produce; robber blocks tile
+
+    BuildOrTrade --> BuildOrTrade : BUILD (settlement/city/road) or TRADE
+    BuildOrTrade --> AwaitGo : no more actions / LIST only / pass
+
+    AwaitGo --> [*] : GO (R2.4 step-forward)
+    note right of AwaitGo : Blocks until "go" received; then next player's turn
+
+    %% Allow multiple builds/trades in same turn
+    BuildOrTrade --> BuildOrTrade : build again
+    BuildOrTrade --> BuildOrTrade : trade again
