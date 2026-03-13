@@ -1,4 +1,4 @@
-# Assignment 1 — Catan Simulator
+# Assignment 2 — Catan Simulator
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=2AA4-Vash-Team-Assignments_assignment1-catan-sim&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=2AA4-Vash-Team-Assignments_assignment1-catan-sim)
 
@@ -6,9 +6,9 @@ SFWRENG 2AA4 — Software Design I (McMaster University, Winter 2026)
 
 ## Overview
 
-This project implements a simplified Settlers of Catan board game simulator. Four randomly-acting agents play on a standard 19-tile hex board, collecting resources, building roads, settlements, and cities, and competing to be the first to reach 10 victory points.
+This project implements a simplified Settlers of Catan board game simulator with human gameplay support. Four players (three computer agents and one optional human) play on a standard 19-tile hex board, collecting resources, building roads, settlements, and cities, and competing to be the first to reach 10 victory points.
 
-The simulator follows the official Catan rulebook with the following exclusions (as specified in the assignment): harbours, domestic/maritime trade, development cards, and the robber mechanic. When a 7 is rolled, the game simply continues without producing resources.
+A2 extends the A1 simulator with: human player input via command-line commands parsed with regular expressions (R2.1), a board visualizer integration using the instructor's Catanatron-based Python script (R2.2), external JSON game state (R2.3), step-forward functionality (R2.4), the robber mechanism with discard/place/steal on rolling 7 (R2.5), and a fully documented Demonstrator class (R2.6).
 
 ## Requirements
 
@@ -22,12 +22,12 @@ Compile the project:
 mvn compile
 ```
 
-Run the simulator with default settings (50 rounds):
+Run the simulator with default settings (50 rounds, all agents):
 ```bash
 mvn exec:java
 ```
 
-Run with a configuration file (e.g. `config.txt` with `turns=100`):
+Run with a configuration file:
 ```bash
 mvn exec:java -Dexec.args="config.txt"
 ```
@@ -38,47 +38,76 @@ On Windows PowerShell, use: `mvn exec:java "-Dexec.args=config.txt"`
 The simulator accepts a configuration file with the following format:
 ```
 turns=100
+human=1
 ```
-The `turns` parameter accepts values from 1 to 8192. If no configuration file is provided, the simulator defaults to 50 rounds.
+- `turns` — number of rounds (1–8192). Defaults to 50.
+- `human` — player ID (1–4) to control as human. Omit for all-agent mode.
 
-## Assignment Task Mapping
+### Human Commands
 
-| Task | Directory | Description |
-|------|-----------|-------------|
-| Task 1 | `model/` | UML domain model (Mermaid source + exported Papyrus diagram PNG) |
-| Task 2 | `src-gen/` | Papyrus code generation (`.uml` model + generated Java skeletons) |
-| Task 3 | `genai/` | GenAI experiment (prompt, raw output, and analysis) |
-| Task 4 | `src/` | Final implementation (14 Java source files) |
+When a human player is configured, the following commands are available during the human's turn:
+
+| Command | Description |
+|---------|-------------|
+| `Roll` | Roll the dice and collect resources |
+| `Go` | End turn (proceed to next player) |
+| `List` | Show cards currently in hand |
+| `Build settlement N` | Build a settlement at node N |
+| `Build city N` | Upgrade settlement at node N to a city |
+| `Build road N1,N2` | Build a road between nodes N1 and N2 |
+
+Between agent turns, the game waits for `Go` to step forward (R2.4).
+
+### Visualizer
+
+In human mode, game state is written to `state.json` after each turn. The instructor's Catanatron-based Python visualizer reads `base_map.json` and `state.json` to render the board. See the [visualizer documentation](https://github.com/ssm-lab/2aa4-2026-base/tree/main/assignments/visualize).
+
+## Running Tests
+
+```bash
+mvn test
+```
+
+68 unit tests across 10 test classes, organized in a JUnit 5 test suite (`CatanTestSuite`).
 
 ## Project Structure
 
 ```
 assignment1-catan-sim/
-├── model/                                     # Task 1: UML Domain Model
-│   ├── catan-domain-model.mmd                 #   Mermaid class diagram source
-│   └── Final_UML_Diagram.png                  #   Exported diagram image
-├── src-gen/                                   # Task 2: Papyrus Code Generation
-│   ├── AA4-A1-TASK2.uml                       #   Papyrus UML model
-│   └── AA4-A1-TASK2/                          #   Generated Java skeletons (15 files)
-├── genai/                                     # Task 3: GenAI Experiment
-│   ├── prompt.md                              #   Documented prompt and parameters
-│   ├── generated-output.md                    #   File listing and known issues
-│   └── generated-code/                        #   Raw AI-generated code (preserved)
-├── src/main/java/ca/mcmaster/se2aa4/catan/   # Task 4: Final Implementation
-│   ├── CatanGame.java          # Main game loop and orchestration
+├── model/                                     # Design artifacts
+│   ├── catan-domain-model.mmd                 #   A1 domain model (Mermaid)
+│   ├── catan-domain-model-a2.mmd              #   A2 extended domain model
+│   ├── agent-turn-automaton.mmd               #   Turn automaton (state machine)
+│   ├── DESIGN-A2.md                           #   A2 design documentation
+│   └── Final_UML_Diagram.png                  #   A1 exported diagram
+├── src/main/java/ca/mcmaster/se2aa4/catan/   # Implementation (25 source files)
+│   ├── CatanGame.java          # Game engine and orchestration
 │   ├── Board.java              # Hex board topology (19 tiles, 54 nodes, 72 edges)
 │   ├── Tile.java               # Hexagonal land tile
 │   ├── Node.java               # Intersection (settlement/city location)
 │   ├── Edge.java               # Path between nodes (road location)
-│   ├── Player.java             # Agent with resources and build logic
+│   ├── Player.java             # Abstract base for all player types
+│   ├── AgentPlayer.java        # Computer-controlled random agent
+│   ├── HumanPlayer.java        # Human-controlled player (console input)
+│   ├── HumanInputReader.java   # Interface for reading input (DIP)
+│   ├── ConsoleInputReader.java # Console implementation of HumanInputReader
+│   ├── CommandParser.java      # Regex-based command parser (R2.1)
+│   ├── CommandType.java        # Enum: ROLL, GO, LIST, BUILD_*, UNKNOWN
+│   ├── ParsedCommand.java      # Parsed command value object
 │   ├── Building.java           # Settlement or city
 │   ├── Road.java               # Road placed on an edge
 │   ├── Bank.java               # Resource supply manager
 │   ├── Dice.java               # Two six-sided dice
+│   ├── Robber.java             # Robber entity (R2.5)
+│   ├── RobberHandler.java     # Robber sequence logic (SRP extraction)
+│   ├── TurnPhase.java          # Enum: 8-state turn automaton
+│   ├── GameStateWriter.java    # JSON state serializer (R2.2, R2.3)
 │   ├── Configuration.java      # Config file parser
 │   ├── Demonstrator.java       # Entry point (static void main)
 │   ├── ResourceType.java       # Enum: WOOD, BRICK, WHEAT, ORE, SHEEP
 │   └── BuildingType.java       # Enum: SETTLEMENT, CITY
+├── src/test/java/ca/mcmaster/se2aa4/catan/   # Tests (68 tests, 10 classes)
+├── base_map.json               # Tile layout for visualizer
 ├── pom.xml                     # Maven build configuration
 └── README.md
 ```

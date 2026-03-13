@@ -19,7 +19,6 @@ report/
 *.pdf
 
 # Local files
-kanban-issues.md
 model/catan-model.uml
 
 # Generated code build output
