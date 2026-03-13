@@ -1,47 +1,44 @@
 %% ============================================================
-%% Assignment 2 – Agent turn automaton
+%% Assignment 2 – Agent Turn Automaton
 %% ============================================================
 %% Models which actions can be taken when within a single turn.
 %% One turn = one player's turn (human or agent).
+%% Maps to the TurnPhase enum in the Java implementation.
 %%
 %% ACTION SPACE (what can be taken when):
-%%   AwaitRoll    : ROLL only (human types "Roll"; agent auto-rolls)
-%%   RobberDiscard: (automatic) each player with >7 cards discards half
-%%   RobberPlace  : (automatic) robber placed on random tile
-%%   RobberSteal  : (automatic) one qualifying player gives card to roller
-%%   PostRoll     : (automatic) distribute resources; then → BuildOrTrade
-%%   BuildOrTrade : BUILD (settlement | city | road), TRADE, LIST; repeat or pass
-%%   AwaitGo      : GO only (blocks until "go" for step-forward R2.4)
+%%   AWAIT_ROLL     : ROLL only (human types "Roll"; agent auto-rolls)
+%%   ROLL_DICE      : (transition) evaluate dice result
+%%   ROBBER_DISCARD : (automatic) each player with >7 cards discards half
+%%   ROBBER_PLACE   : (automatic) robber placed on random tile
+%%   ROBBER_STEAL   : (automatic) qualifying player gives card to roller
+%%   POST_ROLL      : (automatic) distribute resources; then -> BUILD_OR_TRADE
+%%   BUILD_OR_TRADE : BUILD (settlement | city | road), LIST; repeat or GO
+%%   AWAIT_GO       : GO only (blocks until "go" for step-forward R2.4)
 %% ============================================================
 
 stateDiagram-v2
     direction LR
 
-    [*] --> AwaitRoll : turn starts
+    [*] --> AWAIT_ROLL : turn starts
 
-    AwaitRoll --> RollDice : ROLL (human) or auto (agent)
+    AWAIT_ROLL --> ROLL_DICE : ROLL (human) or auto (agent)
 
-    RollDice --> PostRoll : dice ≠ 7
-    RollDice --> RobberDiscard : dice = 7
+    ROLL_DICE --> POST_ROLL : dice ≠ 7
+    ROLL_DICE --> ROBBER_DISCARD : dice = 7
 
-    RobberDiscard --> RobberPlace : all with >7 cards have discarded
-    note right of RobberDiscard : Players with >7 cards discard half (round down)
+    ROBBER_DISCARD --> ROBBER_PLACE : players with >7 cards discard half
+    note right of ROBBER_DISCARD : Round down (R2.5)
 
-    RobberPlace --> RobberSteal : robber placed on new tile
-    note right of RobberPlace : Robber on random tile (R2.5)
+    ROBBER_PLACE --> ROBBER_STEAL : robber placed on random tile
+    note right of ROBBER_PLACE : Must differ from current tile (R2.5)
 
-    RobberSteal --> PostRoll : one qualifying player gives random card to roller
-    note right of RobberSteal : Qualifying = settlement/city adjacent to robber tile
+    ROBBER_STEAL --> POST_ROLL : qualifying player gives random card to roller
+    note right of ROBBER_STEAL : Qualifying = building adjacent to robber tile
 
-    PostRoll --> BuildOrTrade : resources distributed (if any)
-    note right of PostRoll : Tiles with dice number produce; robber blocks tile
+    POST_ROLL --> BUILD_OR_TRADE : resources distributed (robber blocks tile)
 
-    BuildOrTrade --> BuildOrTrade : BUILD (settlement/city/road) or TRADE
-    BuildOrTrade --> AwaitGo : no more actions / LIST only / pass
+    BUILD_OR_TRADE --> BUILD_OR_TRADE : BUILD settlement / city / road
+    BUILD_OR_TRADE --> AWAIT_GO : GO (done building)
 
-    AwaitGo --> [*] : GO (R2.4 step-forward)
-    note right of AwaitGo : Blocks until "go" received; then next player's turn
-
-    %% Allow multiple builds/trades in same turn
-    BuildOrTrade --> BuildOrTrade : build again
-    BuildOrTrade --> BuildOrTrade : trade again
+    AWAIT_GO --> [*] : next player's turn (R2.4 step-forward)
+    note right of AWAIT_GO : Blocks until "go" command received

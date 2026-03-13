@@ -1,13 +1,13 @@
 %% ============================================================
-%% Assignment 2 – Extended Domain Model
-%% Human gameplay, visualization, robber, trading, step-forward
+%% Assignment 2 – Extended Domain Model (UML Class Diagram)
+%% Human gameplay, visualization, robber, step-forward
 %% ============================================================
 %% Changes from A1:
-%% - Player hierarchy: AgentPlayer vs HumanPlayer (SRP, OCP)
-%% - CommandParser for human input (regex); HumanInputReader
-%% - GameStateSnapshot + GameStateWriter for JSON (R2.3, R2.2)
-%% - Robber on Board; TurnPhase for step-forward (R2.4)
-%% - Trading: BankTrade, DomesticTrade
+%% - Player hierarchy: abstract Player -> AgentPlayer, HumanPlayer (OCP, LSP)
+%% - CommandParser for human input (regex, R2.1); HumanInputReader (DIP)
+%% - GameStateWriter for JSON visualizer output (R2.2, R2.3)
+%% - Robber entity on Board (R2.5)
+%% - TurnPhase enum for automaton-based turn control (R2.4)
 %% ============================================================
 
 classDiagram
@@ -30,13 +30,25 @@ classDiagram
         CITY
     }
 
+    class CommandType {
+        <<enumeration>>
+        ROLL
+        GO
+        LIST
+        BUILD_SETTLEMENT
+        BUILD_CITY
+        BUILD_ROAD
+        UNKNOWN
+    }
+
     class TurnPhase {
         <<enumeration>>
         AWAIT_ROLL
-        POST_ROLL
+        ROLL_DICE
         ROBBER_DISCARD
         ROBBER_PLACE
         ROBBER_STEAL
+        POST_ROLL
         BUILD_OR_TRADE
         AWAIT_GO
     }
@@ -46,20 +58,23 @@ classDiagram
     class CatanGame {
         -currentRound : int
         -longestRoadLength : int
-        -currentTurnPhase : TurnPhase
-        -currentPlayerIndex : int
         -diceRollThisTurn : int
+        -currentTurnPhase : TurnPhase
         +play() void
         +setupPhase() void
         +executeRound() boolean
         +executeTurn(player : Player) void
+        +rollDice() int
         +distributeResources(diceRoll : int) void
-        +handleRollSeven() void
+        +handleRollSeven(roller : Player) void
         +checkWinCondition() boolean
         +updateLongestRoad() void
-        +printRoundSummary() void
+        +tryBuildSettlement(player : Player, nodeId : int) void
+        +tryBuildCity(player : Player, nodeId : int) void
+        +tryBuildRoad(player : Player, fromId : int, toId : int) void
         +waitForGo() void
-        +writeGameState(path : String) void
+        +getCurrentRound() int
+        +getCurrentTurnPhase() TurnPhase
     }
 
     class Configuration {
@@ -67,6 +82,7 @@ classDiagram
         -humanPlayerId : int
         +getMaxRounds() int
         +getHumanPlayerId() int
+        +isHumanGame() boolean
         +load(filePath : String) void
     }
 
@@ -79,7 +95,6 @@ classDiagram
         +hasEnoughResources(type : ResourceType, amount : int) boolean
         +distributeResource(type : ResourceType, amount : int) void
         +collectResource(type : ResourceType, amount : int) void
-        +getRemainingCount(type : ResourceType) int
     }
 
     class Demonstrator {
@@ -96,16 +111,12 @@ classDiagram
         +getUpgradeableNodes(player : Player) List~Node~
         +getAvailableSetupNodes() List~Node~
         +calculateLongestRoad(player : Player) int
-        +getTiles() List~Tile~
-        +getNodes() List~Node~
-        +getEdges() List~Edge~
     }
 
     class Robber {
         -currentTile : Tile
         +getCurrentTile() Tile
         +placeOn(tile : Tile) void
-        +getTile() Tile
     }
 
     class Tile {
@@ -150,8 +161,7 @@ classDiagram
         +getEdge() Edge
     }
 
-    %% ==================== PLAYER HIERARCHY (A2) ====================
-    %% Abstract player; Agent and Human variants (OCP, SRP)
+    %% ==================== PLAYER HIERARCHY (OCP, LSP) ====================
 
     class Player {
         <<abstract>>
@@ -161,7 +171,6 @@ classDiagram
         #remainingCities : int
         #remainingRoads : int
         +getId() int
-        +getVictoryPoints() int
         +getTotalResourceCards() int
         +getResourceCount(type : ResourceType) int
         +addResource(type : ResourceType, amount : int) void
@@ -169,26 +178,25 @@ classDiagram
         +canBuildRoad() boolean
         +canBuildSettlement() boolean
         +canBuildCity() boolean
-        +buildRoad(edge : Edge) void
-        +buildSettlement(node : Node) void
-        +buildCity(node : Node) void
-        +takeTurn(game : CatanGame, board : Board, bank : Bank) void
+        +buildRoad(edge : Edge, bank : Bank) void
+        +buildSettlement(node : Node, bank : Bank) void
+        +buildCity(node : Node, bank : Bank) void
+        +takeTurn(game : CatanGame) void*
     }
 
     class AgentPlayer {
         -random : Random
-        +takeTurn(game : CatanGame, board : Board, bank : Bank) void
-        -chooseRandomAction(board : Board, bank : Bank, round : int) void
+        +takeTurn(game : CatanGame) void
+        +chooseRandomAction(board : Board, bank : Bank, round : int) void
     }
 
     class HumanPlayer {
         -inputReader : HumanInputReader
         -commandParser : CommandParser
-        +takeTurn(game : CatanGame, board : Board, bank : Bank) void
-        +readCommand() ParsedCommand
+        +takeTurn(game : CatanGame) void
     }
 
-    %% ==================== HUMAN INPUT (R2.1) ====================
+    %% ==================== HUMAN INPUT (R2.1, DIP) ====================
 
     class HumanInputReader {
         <<interface>>
@@ -203,26 +211,7 @@ classDiagram
     }
 
     class CommandParser {
-        -rollPattern : Pattern
-        -goPattern : Pattern
-        -listPattern : Pattern
-        -buildSettlementPattern : Pattern
-        -buildCityPattern : Pattern
-        -buildRoadPattern : Pattern
         +parse(input : String) ParsedCommand
-        +isRoll(cmd : ParsedCommand) boolean
-        +isGo(cmd : ParsedCommand) boolean
-    }
-
-    class CommandType {
-        <<enumeration>>
-        ROLL
-        GO
-        LIST
-        BUILD_SETTLEMENT
-        BUILD_CITY
-        BUILD_ROAD
-        UNKNOWN
     }
 
     class ParsedCommand {
@@ -236,62 +225,31 @@ classDiagram
         +getToNodeId() int
     }
 
-    %% ==================== GAME STATE EXPORT (R2.3, R2.2) ====================
-
-    class GameStateSnapshot {
-        -roads : List~RoadDTO~
-        -buildings : List~BuildingDTO~
-        -robberTileId : int
-        -currentRound : int
-        -currentPlayerId : int
-        +getRoads() List
-        +getBuildings() List
-        +toJson() String
-    }
+    %% ==================== GAME STATE EXPORT (R2.2, R2.3) ====================
 
     class GameStateWriter {
-        -snapshotFactory : GameStateSnapshotFactory
-        +writeState(game : CatanGame, filePath : String) void
-    }
-
-    class GameStateSnapshotFactory {
-        +createFrom(game : CatanGame) GameStateSnapshot
-    }
-
-    %% ==================== TRADING ====================
-
-    class TradeOffer {
-        <<interface>>
-        +canExecute(bank : Bank, player : Player) boolean
-        +execute(bank : Bank, player : Player) void
-    }
-
-    class BankTrade {
-        -give : Map~ResourceType, int~
-        -receive : ResourceType
-        +canExecute(bank : Bank, player : Player) boolean
-        +execute(bank : Bank, player : Player) void
+        +write(filePath : String) void
     }
 
     %% ==================== COMPOSITION ====================
 
-    CatanGame "1" *-- "1" Board : contains
-    CatanGame "1" *-- "4" Player : contains
-    CatanGame "1" *-- "1" Dice : contains
-    CatanGame "1" *-- "1" Bank : contains
-    CatanGame "1" *-- "1" Configuration : contains
-    CatanGame "1" *-- "1" Robber : contains
-    CatanGame "1" *-- "1" GameStateWriter : uses
+    CatanGame "1" *-- "1" Board
+    CatanGame "1" *-- "4" Player
+    CatanGame "1" *-- "1" Dice
+    CatanGame "1" *-- "1" Bank
+    CatanGame "1" *-- "1" Configuration
+    CatanGame "1" *-- "1" Robber
 
-    Board "1" *-- "19" Tile : contains
-    Board "1" *-- "54" Node : contains
-    Board "1" *-- "72" Edge : contains
+    Board "1" *-- "19" Tile
+    Board "1" *-- "54" Node
+    Board "1" *-- "72" Edge
 
     Robber "1" --> "0..1" Tile : on
 
     %% ==================== ASSOCIATIONS ====================
 
     CatanGame "1" --> "0..1" Player : longestRoadHolder
+    CatanGame ..> GameStateWriter : creates
 
     Tile "1..3" -- "6" Node : adjacentTo
     Node "2" -- "2..3" Edge : connectsTo
@@ -300,26 +258,17 @@ classDiagram
     Building "*" --> "1" Player : ownedBy
     Road "*" --> "1" Player : ownedBy
 
-    HumanPlayer "1" *-- "1" HumanInputReader : uses
-    HumanPlayer "1" *-- "1" CommandParser : uses
+    HumanPlayer "1" *-- "1" HumanInputReader
+    HumanPlayer "1" *-- "1" CommandParser
     CommandParser ..> ParsedCommand : produces
-    ParsedCommand --> CommandType : uses
-    GameStateWriter "1" *-- "1" GameStateSnapshotFactory : uses
-    GameStateSnapshotFactory ..> GameStateSnapshot : creates
+    ParsedCommand --> CommandType
 
     %% ==================== INHERITANCE ====================
 
     Player <|-- AgentPlayer
     Player <|-- HumanPlayer
     HumanInputReader <|.. ConsoleInputReader
-    TradeOffer <|.. BankTrade
 
     %% ==================== DEPENDENCY ====================
 
     Demonstrator ..> CatanGame : creates
-
-    note for Node "Self-association: adjacent to 2..3 other Nodes"
-    note for CommandParser "R2.1: Parsing via regular expressions"
-    note for GameStateWriter "R2.3: Writes state.json for visualizer (R2.2)"
-    note for CatanGame "R2.4: waitForGo() blocks until 'go' command"
-    note for Robber "R2.5: Place on random tile; steal from qualifying player"
