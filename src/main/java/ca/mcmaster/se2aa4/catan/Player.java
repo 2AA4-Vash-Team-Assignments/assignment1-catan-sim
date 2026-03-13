@@ -1,28 +1,22 @@
 package ca.mcmaster.se2aa4.catan;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
-public class Player {
+/**
+ * Abstract base for all player types in the Catan simulator.
+ * Manages resources, piece counts, and build eligibility.
+ * Subclasses define how the player acts during their turn (OCP).
+ */
+public abstract class Player {
 
-    private final int id;
-    private final Map<ResourceType, Integer> resources;
-    private int remainingSettlements;
-    private int remainingCities;
-    private int remainingRoads;
-    private final Random random;
-    private final boolean human;
-    private final HumanInputReader inputReader;
-    private final CommandParser commandParser;
+    protected final int id;
+    protected final Map<ResourceType, Integer> resources;
+    protected int remainingSettlements;
+    protected int remainingCities;
+    protected int remainingRoads;
 
-    public Player(int id) {
-        this(id, null, null);
-    }
-
-    public Player(int id, HumanInputReader inputReader, CommandParser commandParser) {
+    protected Player(int id) {
         this.id = id;
         this.resources = new EnumMap<>(ResourceType.class);
         for (ResourceType type : ResourceType.values()) {
@@ -31,35 +25,16 @@ public class Player {
         this.remainingSettlements = 5;
         this.remainingCities = 4;
         this.remainingRoads = 15;
-        this.random = new Random();
-        this.inputReader = inputReader;
-        this.commandParser = commandParser;
-        this.human = (inputReader != null && commandParser != null);
-    }
-
-    public boolean isHuman() {
-        return human;
-    }
-
-    public HumanInputReader getInputReader() {
-        return inputReader;
-    }
-
-    public CommandParser getCommandParser() {
-        return commandParser;
-    }
-
-    public int getId() {
-        return id;
     }
 
     /**
-     * Stub: VP calculation requires board state (buildings on nodes + longest road),
-     * so the real logic lives in CatanGame.calculateVictoryPoints(player).
-     * Kept here for traceability to the UML model where this method is defined on Player.
+     * Execute this player's turn. Agent players act automatically;
+     * human players read commands from the console.
      */
-    public int getVictoryPoints() {
-        return 0;
+    public abstract void takeTurn(CatanGame game);
+
+    public int getId() {
+        return id;
     }
 
     public int getTotalResourceCards() {
@@ -134,70 +109,6 @@ public class Player {
         node.getBuilding().setType(BuildingType.CITY);
         remainingCities--;
         remainingSettlements++;
-    }
-
-    /**
-     * R1.8: Implements a simple linear check of all actions that can be executed,
-     * then picks one randomly. Agents with >7 cards must try to spend by building.
-     *
-     * @param board        the game board
-     * @param bank         the resource bank (resources returned when spent)
-     * @param currentRound the current round (for output encoding)
-     */
-    public void chooseRandomAction(Board board, Bank bank, int currentRound) {
-        // R1.8: agents with >7 cards must keep trying to spend until <=7 or no options
-        while (true) {
-            List<Runnable> actions = collectPossibleActions(board, bank, currentRound);
-            if (actions.isEmpty()) {
-                break;
-            }
-            // Pick one action randomly from all available options
-            Runnable chosen = actions.get(random.nextInt(actions.size()));
-            chosen.run();
-            // Stop when no longer forced to spend (>7), or after one build for randomly acting
-            if (getTotalResourceCards() <= 7) {
-                break;
-            }
-        }
-    }
-
-    /**
-     * Linear check: enumerates all possible build actions (city, settlement, road)
-     * that the player can currently execute.
-     */
-    private List<Runnable> collectPossibleActions(Board board, Bank bank, int currentRound) {
-        List<Runnable> actions = new ArrayList<>();
-
-        if (canBuildCity()) {
-            for (Node node : board.getUpgradeableNodes(this)) {
-                Node n = node;
-                actions.add(() -> {
-                    buildCity(n, bank);
-                    System.out.println(currentRound + " / P" + id + ": Built city at node " + n.getId());
-                });
-            }
-        }
-        if (canBuildSettlement()) {
-            for (Node node : board.getAvailableSettlementNodes(this)) {
-                Node n = node;
-                actions.add(() -> {
-                    buildSettlement(n, bank);
-                    System.out.println(currentRound + " / P" + id + ": Built settlement at node " + n.getId());
-                });
-            }
-        }
-        if (canBuildRoad()) {
-            for (Edge edge : board.getAvailableRoadEdges(this)) {
-                Edge e = edge;
-                actions.add(() -> {
-                    buildRoad(e, bank);
-                    List<Node> endpoints = e.getEndpoints();
-                    System.out.println(currentRound + " / P" + id + ": Built road between nodes "
-                            + endpoints.get(0).getId() + " and " + endpoints.get(1).getId());
-                });
-            }
-        }
-        return actions;
     }
 
     public void useSetupSettlement() {

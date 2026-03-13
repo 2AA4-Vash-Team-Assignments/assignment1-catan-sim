@@ -25,7 +25,7 @@ class CatanGameTest {
     void setUp() {
         board = new Board();
         board.initialize();
-        player = new Player(1);
+        player = new AgentPlayer(1);
         bank = new Bank();
     }
 

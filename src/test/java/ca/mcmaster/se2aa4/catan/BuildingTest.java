@@ -13,7 +13,7 @@ class BuildingTest {
 
     @Test
     void testSettlementVictoryPoints() {
-        Player player = new Player(1);
+        Player player = new AgentPlayer(1);
         Building settlement = new Building(BuildingType.SETTLEMENT, player);
         assertEquals(1, settlement.getVictoryPoints(),
                 "A settlement should be worth exactly 1 VP");
@@ -21,7 +21,7 @@ class BuildingTest {
 
     @Test
     void testCityVictoryPoints() {
-        Player player = new Player(1);
+        Player player = new AgentPlayer(1);
         Building city = new Building(BuildingType.CITY, player);
         assertEquals(2, city.getVictoryPoints(),
                 "A city should be worth exactly 2 VPs");
@@ -29,7 +29,7 @@ class BuildingTest {
 
     @Test
     void testSettlementResourceMultiplier() {
-        Player player = new Player(1);
+        Player player = new AgentPlayer(1);
         Building settlement = new Building(BuildingType.SETTLEMENT, player);
         assertEquals(1, settlement.getResourceMultiplier(),
                 "Settlement should produce 1 resource per roll");
@@ -37,7 +37,7 @@ class BuildingTest {
 
     @Test
     void testCityResourceMultiplier() {
-        Player player = new Player(1);
+        Player player = new AgentPlayer(1);
         Building city = new Building(BuildingType.CITY, player);
         assertEquals(2, city.getResourceMultiplier(),
                 "City should produce 2 resources per roll");
@@ -46,7 +46,7 @@ class BuildingTest {
     @Test
     void testUpgradeSettlementToCity_changesVP() {
         // simulate upgrade path: settlement -> city thru setType
-        Player player = new Player(1);
+        Player player = new AgentPlayer(1);
         Building building = new Building(BuildingType.SETTLEMENT, player);
         assertEquals(1, building.getVictoryPoints());// before upgrading
 
@@ -56,7 +56,7 @@ class BuildingTest {
 
     @Test
     void testBuildingOwner() {
-        Player player = new Player(3);
+        Player player = new AgentPlayer(3);
         Building building = new Building(BuildingType.SETTLEMENT, player);
         assertEquals(player, building.getOwner(),
                 "Building owner should be the player it was constructed for");

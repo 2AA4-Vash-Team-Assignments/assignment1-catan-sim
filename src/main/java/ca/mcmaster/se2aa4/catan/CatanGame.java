@@ -11,6 +11,7 @@ public class CatanGame {
     private int longestRoadLength;
     private Player longestRoadHolder;
     private int diceRollThisTurn;
+    private TurnPhase currentTurnPhase;
 
     private final Board board;
     private final List<Player> players;
@@ -34,9 +35,10 @@ public class CatanGame {
         this.longestRoadLength = 4;
         this.longestRoadHolder = null;
         this.diceRollThisTurn = 0;
+        this.currentTurnPhase = TurnPhase.AWAIT_ROLL;
 
         for (int i = 1; i <= 4; i++) {
-            players.add(new Player(i));
+            players.add(new AgentPlayer(i));
         }
     }
 
@@ -47,7 +49,7 @@ public class CatanGame {
     public void play() {
         if (configuration.isHumanGame()) {
             int id = configuration.getHumanPlayerId();
-            players.set(id - 1, new Player(id, new ConsoleInputReader(), new CommandParser()));
+            players.set(id - 1, new HumanPlayer(id, new ConsoleInputReader(), new CommandParser()));
         }
         board.initialize();
         setupPhase();
@@ -74,8 +76,6 @@ public class CatanGame {
     }
 
     public void setupPhase() {
-        // Snake draft: each player places 2 settlements + 2 roads in 1-2-3-4-4-3-2-1 order
-        // First placement: no resources. Second placement: receive resources from adjacent tiles
         for (Player player : players) {
             placeInitialSettlementAndRoad(player, false);
         }
@@ -94,7 +94,6 @@ public class CatanGame {
         player.useSetupSettlement();
         System.out.println("0 / P" + player.getId() + ": Placed settlement at node " + chosenNode.getId());
 
-        // Second settlement: receive 1 resource per adjacent tile (skipping desert)
         if (isSecondPlacement) {
             for (Tile tile : chosenNode.getAdjacentTiles()) {
                 ResourceType resource = tile.getResourceType();
@@ -106,7 +105,6 @@ public class CatanGame {
             }
         }
 
-        // Place a road on an adjacent edge
         List<Edge> adjacentEdges = chosenNode.getAdjacentEdges();
         List<Edge> freeEdges = new ArrayList<>();
         for (Edge edge : adjacentEdges) {
@@ -140,10 +138,6 @@ public class CatanGame {
         return false;
     }
 
-    /**
-     * Prints the current victory points for all players.
-     * Called at the end of each round per R1.7.
-     */
     private void printVictoryPoints() {
         StringBuilder vpLine = new StringBuilder(currentRound + " / VP:");
         for (Player player : players) {
@@ -153,80 +147,116 @@ public class CatanGame {
         System.out.println(vpLine);
     }
 
+    /**
+     * Delegates the turn to the player via polymorphism (OCP).
+     * Resets turn phase to AWAIT_ROLL before handing off to the player.
+     */
     public void executeTurn(Player player) {
-        if (player.isHuman()) {
-            executeHumanTurn(player);
-        } else {
-            diceRollThisTurn = dice.roll();
-            System.out.println(currentRound + " / P" + player.getId() + " / Dice: " + diceRollThisTurn);
-            if (diceRollThisTurn == 7) {
-                handleRollSeven(player);
-            } else {
-                distributeResources(diceRollThisTurn);
-            }
-            player.chooseRandomAction(board, bank, currentRound);
-            updateLongestRoad();
-        }
+        currentTurnPhase = TurnPhase.AWAIT_ROLL;
+        player.takeTurn(this);
+        currentTurnPhase = TurnPhase.AWAIT_GO;
     }
 
-    private void executeHumanTurn(Player player) {
-        HumanInputReader input = player.getInputReader();
-        CommandParser parser = player.getCommandParser();
+    /**
+     * Rolls the dice, transitions to ROLL_DICE phase, and returns the value.
+     * Called by both AgentPlayer and HumanPlayer during their turn.
+     */
+    public int rollDice() {
+        diceRollThisTurn = dice.roll();
+        currentTurnPhase = TurnPhase.ROLL_DICE;
+        return diceRollThisTurn;
+    }
+
+    public void waitForGo() {
+        if (!configuration.isHumanGame()) {
+            return;
+        }
+        // Reuse the HumanPlayer's input reader and parser to avoid duplicate Scanners
+        HumanPlayer human = null;
+        for (Player p : players) {
+            if (p instanceof HumanPlayer) {
+                human = (HumanPlayer) p;
+                break;
+            }
+        }
+        if (human == null) return;
+        HumanInputReader input = human.getInputReader();
+        CommandParser parser = human.getCommandParser();
         while (true) {
-            System.out.print("P" + player.getId() + "> ");
+            System.out.print("> ");
             String line = input.hasNextLine() ? input.readLine() : "";
-            ParsedCommand cmd = parser.parse(line);
-            switch (cmd.getCommandType()) {
-                case ROLL:
-                    if (diceRollThisTurn != 0) {
-                        System.out.println("Already rolled this turn.");
-                        break;
-                    }
-                    diceRollThisTurn = dice.roll();
-                    System.out.println(currentRound + " / P" + player.getId() + " / Dice: " + diceRollThisTurn);
-                    if (diceRollThisTurn == 7) {
-                        handleRollSeven(player);
-                    } else {
-                        distributeResources(diceRollThisTurn);
-                    }
-                    break;
-                case GO:
-                    if (diceRollThisTurn == 0) {
-                        System.out.println("Roll first.");
-                        break;
-                    }
-                    updateLongestRoad();
-                    return;
-                case LIST:
-                    listHand(player);
-                    break;
-                case BUILD_SETTLEMENT:
-                    tryBuildSettlement(player, cmd.getNodeId());
-                    break;
-                case BUILD_CITY:
-                    tryBuildCity(player, cmd.getNodeId());
-                    break;
-                case BUILD_ROAD:
-                    tryBuildRoad(player, cmd.getFromNodeId(), cmd.getToNodeId());
-                    break;
-                default:
-                    if (!line.isBlank()) {
-                        System.out.println("Unknown command. Use: Roll, Go, List, Build settlement <id>, Build city <id>, Build road <from>,<to>");
-                    }
+            if (parser.parse(line).getCommandType() == CommandType.GO) {
+                return;
             }
         }
     }
 
-    private void listHand(Player player) {
-        StringBuilder sb = new StringBuilder();
-        for (ResourceType t : ResourceType.values()) {
-            int c = player.getResourceCount(t);
-            if (c > 0) sb.append(t).append("=").append(c).append(" ");
+    public void handleRollSeven(Player roller) {
+        // Phase: ROBBER_DISCARD -> ROBBER_PLACE -> ROBBER_STEAL -> POST_ROLL
+        currentTurnPhase = TurnPhase.ROBBER_DISCARD;
+
+        // Discard half for players with >7 cards (R2.5)
+        for (Player p : players) {
+            int total = p.getTotalResourceCards();
+            if (total > 7) {
+                int discard = total / 2;
+                int discarded = 0;
+                for (ResourceType type : ResourceType.values()) {
+                    if (discarded >= discard) break;
+                    int have = p.getResourceCount(type);
+                    int toDiscard = Math.min(have, discard - discarded);
+                    if (toDiscard > 0) {
+                        p.removeResource(type, toDiscard);
+                        bank.collectResource(type, toDiscard);
+                        discarded += toDiscard;
+                        System.out.println(currentRound + " / P" + p.getId() + ": Discarded " + toDiscard + " " + type);
+                    }
+                }
+            }
         }
-        System.out.println(sb.length() > 0 ? sb.toString() : "No resources");
+
+        // Move robber to a random non-desert tile (different from current)
+        currentTurnPhase = TurnPhase.ROBBER_PLACE;
+        Tile robberTile = robber.getCurrentTile();
+        List<Tile> placeable = new ArrayList<>();
+        for (Tile t : board.getTiles()) {
+            if (t.getResourceType() != null && t != robberTile) {
+                placeable.add(t);
+            }
+        }
+        if (!placeable.isEmpty()) {
+            Tile newTile = placeable.get(random.nextInt(placeable.size()));
+            robber.placeOn(newTile);
+        }
+
+        // Steal from a qualifying player adjacent to the robber's new tile
+        currentTurnPhase = TurnPhase.ROBBER_STEAL;
+        List<Player> qualifying = new ArrayList<>();
+        for (Node node : robber.getCurrentTile().getAdjacentNodes()) {
+            if (node.isOccupied()) {
+                Player owner = node.getBuilding().getOwner();
+                if (owner != roller && owner.getTotalResourceCards() > 0 && !qualifying.contains(owner)) {
+                    qualifying.add(owner);
+                }
+            }
+        }
+        if (!qualifying.isEmpty()) {
+            Player victim = qualifying.get(random.nextInt(qualifying.size()));
+            List<ResourceType> options = new ArrayList<>();
+            for (ResourceType t : ResourceType.values()) {
+                if (victim.getResourceCount(t) > 0) options.add(t);
+            }
+            if (!options.isEmpty()) {
+                ResourceType stolen = options.get(random.nextInt(options.size()));
+                victim.removeResource(stolen, 1);
+                roller.addResource(stolen, 1);
+                System.out.println(currentRound + " / P" + roller.getId() + ": Stole 1 " + stolen + " from P" + victim.getId());
+            }
+        }
+        currentTurnPhase = TurnPhase.POST_ROLL;
     }
 
-    private void tryBuildSettlement(Player player, int nodeId) {
+    public void tryBuildSettlement(Player player, int nodeId) {
         if (nodeId < 0 || nodeId >= board.getNodes().size()) {
             System.out.println("Invalid node id.");
             return;
@@ -244,7 +274,7 @@ public class CatanGame {
         System.out.println(currentRound + " / P" + player.getId() + ": Built settlement at node " + nodeId);
     }
 
-    private void tryBuildCity(Player player, int nodeId) {
+    public void tryBuildCity(Player player, int nodeId) {
         if (nodeId < 0 || nodeId >= board.getNodes().size()) {
             System.out.println("Invalid node id.");
             return;
@@ -262,7 +292,7 @@ public class CatanGame {
         System.out.println(currentRound + " / P" + player.getId() + ": Built city at node " + nodeId);
     }
 
-    private void tryBuildRoad(Player player, int fromId, int toId) {
+    public void tryBuildRoad(Player player, int fromId, int toId) {
         if (fromId < 0 || toId < 0) {
             System.out.println("Invalid edge.");
             return;
@@ -294,75 +324,6 @@ public class CatanGame {
         return null;
     }
 
-    public void waitForGo() {
-        if (!configuration.isHumanGame()) {
-            return;
-        }
-        HumanInputReader input = new ConsoleInputReader();
-        CommandParser parser = new CommandParser();
-        while (true) {
-            System.out.print("> ");
-            String line = input.hasNextLine() ? input.readLine() : "";
-            if (parser.parse(line).getCommandType() == CommandType.GO) {
-                return;
-            }
-        }
-    }
-
-    private void handleRollSeven(Player roller) {
-        Tile robberTile = robber.getCurrentTile();
-        List<Tile> placeable = new ArrayList<>();
-        for (Tile t : board.getTiles()) {
-            if (t.getResourceType() != null && t != robberTile) {
-                placeable.add(t);
-            }
-        }
-        if (!placeable.isEmpty()) {
-            Tile newTile = placeable.get(random.nextInt(placeable.size()));
-            robber.placeOn(newTile);
-        }
-        for (Player p : players) {
-            int total = p.getTotalResourceCards();
-            if (total > 7) {
-                int discard = total / 2;
-                int discarded = 0;
-                for (ResourceType type : ResourceType.values()) {
-                    if (discarded >= discard) break;
-                    int have = p.getResourceCount(type);
-                    int toDiscard = Math.min(have, discard - discarded);
-                    if (toDiscard > 0) {
-                        p.removeResource(type, toDiscard);
-                        bank.collectResource(type, toDiscard);
-                        discarded += toDiscard;
-                        System.out.println(currentRound + " / P" + p.getId() + ": Discarded " + toDiscard + " " + type);
-                    }
-                }
-            }
-        }
-        List<Player> qualifying = new ArrayList<>();
-        for (Node node : robber.getCurrentTile().getAdjacentNodes()) {
-            if (node.isOccupied()) {
-                Player owner = node.getBuilding().getOwner();
-                if (owner != roller && owner.getTotalResourceCards() > 0 && !qualifying.contains(owner)) {
-                    qualifying.add(owner);
-                }
-            }
-        }
-        if (!qualifying.isEmpty()) {
-            Player victim = qualifying.get(random.nextInt(qualifying.size()));
-            List<ResourceType> options = new ArrayList<>();
-            for (ResourceType t : ResourceType.values()) {
-                if (victim.getResourceCount(t) > 0) options.add(t);
-            }
-            if (!options.isEmpty()) {
-                ResourceType stolen = options.get(random.nextInt(options.size()));
-                victim.removeResource(stolen, 1);
-                roller.addResource(stolen, 1);
-                System.out.println(currentRound + " / P" + roller.getId() + ": Stole 1 " + stolen + " from P" + victim.getId());
-            }
-        }
-    }
-
     private void writeState() {
         if (stateFilePath == null) return;
         try {
@@ -375,6 +336,7 @@ public class CatanGame {
     }
 
     public void distributeResources(int diceRoll) {
+        currentTurnPhase = TurnPhase.POST_ROLL;
         Tile blocked = robber.getCurrentTile();
         List<Tile> activeTiles = board.getTilesForNumber(diceRoll);
         for (Tile tile : activeTiles) {
@@ -395,6 +357,7 @@ public class CatanGame {
                 }
             }
         }
+        currentTurnPhase = TurnPhase.BUILD_OR_TRADE;
     }
 
     public boolean checkWinCondition() {
@@ -432,11 +395,10 @@ public class CatanGame {
                 bestLength = roadLength;
                 bestPlayer = player;
             } else if (roadLength == bestLength && player == longestRoadHolder) {
-                bestPlayer = player; // current holder retains on tie
+                bestPlayer = player;
             }
         }
 
-        // Must have at least 5 roads to hold longest road
         if (bestLength < 5) {
             bestPlayer = null;
         }
@@ -465,6 +427,22 @@ public class CatanGame {
             System.out.println("Longest road: P" + longestRoadHolder.getId()
                     + " (" + longestRoadLength + ")");
         }
+    }
+
+    public Board getBoard() {
+        return board;
+    }
+
+    public Bank getBank() {
+        return bank;
+    }
+
+    public int getCurrentRound() {
+        return currentRound;
+    }
+
+    public TurnPhase getCurrentTurnPhase() {
+        return currentTurnPhase;
     }
 
     public Configuration getConfiguration() {

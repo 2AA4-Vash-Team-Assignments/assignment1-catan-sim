@@ -27,7 +27,7 @@ class NodeTest {
 
     @Test
     void testSetBuilding_marksNodeOccupied() {
-        Player player = new Player(1);
+        Player player = new AgentPlayer(1);
         Building settlement = new Building(BuildingType.SETTLEMENT, player);
         node.setBuilding(settlement);
         assertTrue(node.isOccupied());
@@ -46,7 +46,7 @@ class NodeTest {
         Node neighbour = new Node(1);
         node.addAdjacentNode(neighbour);
 
-        Player player = new Player(2);
+        Player player = new AgentPlayer(2);
         Building existing = new Building(BuildingType.SETTLEMENT, player);
         neighbour.setBuilding(existing);
 
