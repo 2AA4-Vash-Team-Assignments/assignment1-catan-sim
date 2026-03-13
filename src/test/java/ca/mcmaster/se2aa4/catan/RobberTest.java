@@ -5,8 +5,9 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests the Robber entity and roll-seven mechanics (R2.5).
- * Verifies placement, tile blocking, and the discard rule.
+ * Tests the Robber entity and the roll-seven mechanics (R2.5).
+ * Verifies placement, tile blocking, and the discard rule through
+ * the actual CatanGame.handleRollSeven() method.
  *
  * @author Sammy Tourani
  */
@@ -47,17 +48,19 @@ class RobberTest {
     }
 
     @Test
-    void testDiscardHalf_playerWithEightCards() {
-        // R2.5: player with >7 cards discards half (8 / 2 = 4)
-        Player player = new AgentPlayer(1);
-        player.addResource(ResourceType.WOOD, 4);
-        player.addResource(ResourceType.BRICK, 4);
-        assertEquals(8, player.getTotalResourceCards());
+    void testHandleRollSeven_phaseTransitionsToPostRoll() {
+        // R2.5: verify handleRollSeven() drives the game through to POST_ROLL
+        CatanGame game = new CatanGame();
+        game.getBoard().initialize();
+        game.setupPhase();
 
-        // simulate discard logic: half of 8 = 4
-        int discard = player.getTotalResourceCards() / 2;
-        assertEquals(4, discard,
-                "Player with 8 cards should discard 4");
+        // simulate rolling so the game is in ROLL_DICE phase
+        game.rollDice();
+        Player roller = new AgentPlayer(99);
+        game.handleRollSeven(roller);
+
+        assertEquals(TurnPhase.POST_ROLL, game.getCurrentTurnPhase(),
+                "After handleRollSeven, game phase should be POST_ROLL");
     }
 
     @Test
