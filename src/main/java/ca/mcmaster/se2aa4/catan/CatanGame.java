@@ -12,6 +12,7 @@ public class CatanGame {
     private Player longestRoadHolder;
     private int diceRollThisTurn;
     private TurnPhase currentTurnPhase;
+    private Player currentPlayer;
 
     private final Board board;
     private final List<Player> players;
@@ -20,6 +21,7 @@ public class CatanGame {
     private final Configuration configuration;
     private final Random random;
     private final Robber robber;
+    private final RobberHandler robberHandler;
     private String stateFilePath;
 
     public CatanGame() {
@@ -30,6 +32,7 @@ public class CatanGame {
         this.configuration = new Configuration();
         this.random = new Random();
         this.robber = new Robber();
+        this.robberHandler = new RobberHandler(board, players, robber, bank, random);
         this.stateFilePath = null;
         this.currentRound = 0;
         this.longestRoadLength = 4;
@@ -126,6 +129,7 @@ public class CatanGame {
     public boolean executeRound() {
         for (Player player : players) {
             diceRollThisTurn = 0;
+            currentPlayer = player;
             executeTurn(player);
             writeState();
             if (checkWinCondition()) {
@@ -192,71 +196,16 @@ public class CatanGame {
     }
 
     public void handleRollSeven(Player roller) {
-        // Phase: ROBBER_DISCARD -> ROBBER_PLACE -> ROBBER_STEAL -> POST_ROLL
         currentTurnPhase = TurnPhase.ROBBER_DISCARD;
-
-        // Discard half for players with >7 cards (R2.5)
-        for (Player p : players) {
-            int total = p.getTotalResourceCards();
-            if (total > 7) {
-                int discard = total / 2;
-                int discarded = 0;
-                for (ResourceType type : ResourceType.values()) {
-                    if (discarded >= discard) break;
-                    int have = p.getResourceCount(type);
-                    int toDiscard = Math.min(have, discard - discarded);
-                    if (toDiscard > 0) {
-                        p.removeResource(type, toDiscard);
-                        bank.collectResource(type, toDiscard);
-                        discarded += toDiscard;
-                        System.out.println(currentRound + " / P" + p.getId() + ": Discarded " + toDiscard + " " + type);
-                    }
-                }
-            }
-        }
-
-        // Move robber to a random non-desert tile (different from current)
-        currentTurnPhase = TurnPhase.ROBBER_PLACE;
-        Tile robberTile = robber.getCurrentTile();
-        List<Tile> placeable = new ArrayList<>();
-        for (Tile t : board.getTiles()) {
-            if (t.getResourceType() != null && t != robberTile) {
-                placeable.add(t);
-            }
-        }
-        if (!placeable.isEmpty()) {
-            Tile newTile = placeable.get(random.nextInt(placeable.size()));
-            robber.placeOn(newTile);
-        }
-
-        // Steal from a qualifying player adjacent to the robber's new tile
-        currentTurnPhase = TurnPhase.ROBBER_STEAL;
-        List<Player> qualifying = new ArrayList<>();
-        for (Node node : robber.getCurrentTile().getAdjacentNodes()) {
-            if (node.isOccupied()) {
-                Player owner = node.getBuilding().getOwner();
-                if (owner != roller && owner.getTotalResourceCards() > 0 && !qualifying.contains(owner)) {
-                    qualifying.add(owner);
-                }
-            }
-        }
-        if (!qualifying.isEmpty()) {
-            Player victim = qualifying.get(random.nextInt(qualifying.size()));
-            List<ResourceType> options = new ArrayList<>();
-            for (ResourceType t : ResourceType.values()) {
-                if (victim.getResourceCount(t) > 0) options.add(t);
-            }
-            if (!options.isEmpty()) {
-                ResourceType stolen = options.get(random.nextInt(options.size()));
-                victim.removeResource(stolen, 1);
-                roller.addResource(stolen, 1);
-                System.out.println(currentRound + " / P" + roller.getId() + ": Stole 1 " + stolen + " from P" + victim.getId());
-            }
-        }
+        robberHandler.execute(roller, currentRound);
         currentTurnPhase = TurnPhase.POST_ROLL;
     }
 
     public void tryBuildSettlement(Player player, int nodeId) {
+        if (currentTurnPhase != TurnPhase.BUILD_OR_TRADE && currentTurnPhase != TurnPhase.POST_ROLL) {
+            System.out.println("Cannot build right now (wrong phase).");
+            return;
+        }
         if (nodeId < 0 || nodeId >= board.getNodes().size()) {
             System.out.println("Invalid node id.");
             return;
@@ -275,6 +224,10 @@ public class CatanGame {
     }
 
     public void tryBuildCity(Player player, int nodeId) {
+        if (currentTurnPhase != TurnPhase.BUILD_OR_TRADE && currentTurnPhase != TurnPhase.POST_ROLL) {
+            System.out.println("Cannot build right now (wrong phase).");
+            return;
+        }
         if (nodeId < 0 || nodeId >= board.getNodes().size()) {
             System.out.println("Invalid node id.");
             return;
@@ -293,6 +246,10 @@ public class CatanGame {
     }
 
     public void tryBuildRoad(Player player, int fromId, int toId) {
+        if (currentTurnPhase != TurnPhase.BUILD_OR_TRADE && currentTurnPhase != TurnPhase.POST_ROLL) {
+            System.out.println("Cannot build right now (wrong phase).");
+            return;
+        }
         if (fromId < 0 || toId < 0) {
             System.out.println("Invalid edge.");
             return;
@@ -327,8 +284,8 @@ public class CatanGame {
     private void writeState() {
         if (stateFilePath == null) return;
         try {
-            int currentPlayerId = 1;
-            GameStateWriter writer = new GameStateWriter(board, players, robber, currentRound, currentPlayerId);
+            int activePlayerId = (currentPlayer != null) ? currentPlayer.getId() : 1;
+            GameStateWriter writer = new GameStateWriter(board, players, robber, currentRound, activePlayerId);
             writer.write(stateFilePath);
         } catch (IOException e) {
             System.err.println("Could not write state: " + e.getMessage());
